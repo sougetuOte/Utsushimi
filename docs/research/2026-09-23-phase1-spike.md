@@ -8,19 +8,21 @@ ADR が置き換えられたら本書も消す。
 UI オートメーションで動かして測った（Claude Code、Opus 5.5）。**見た目の出来は測っていない**（窓が動く・隠れる・出るの事実だけ）。
 
 環境：Windows 11 Pro 10.0.26200.9550。画面 2560×1440 が2枚、拡大率 125%。Python 3.11.9、Rust 1.97.0（stable-msvc）、
-Node 24.13.0、.NET SDK 10.0.401（本フェーズで主人の許可を得て winget で導入）、WebView2 153.0、PowerShell 7.6.6。
+Node 24.13.0、.NET SDK 10.0.401（本フェーズで主人の許可を得て winget で導入）、
+Python 3.14.7（同じく許可を得て uv を 0.12.18 に上げ、uv 管理で導入）、WebView2 153.0、PowerShell 7.6.6。
 
 ## 候補
 
 | 候補 | 中身 | 版 |
 |---|---|---|
-| **pyside6** | Python ＋ Qt。トレイは `QSystemTrayIcon`、裏の待ちは `threading` ＋ Qt のシグナル | PySide6 6.11.2、sqlite3（標準、SQLite 3.45.1） |
+| **pyside6** | Python ＋ Qt。トレイは `QSystemTrayIcon`、裏の待ちは `threading` ＋ Qt のシグナル | PySide6 6.11.2、sqlite3（標準）。Python 3.11.9（SQLite 3.45.1）で測り、ADR 0001 の版選定の後に 3.14.7（SQLite 3.53.1）で測り直した |
 | **tauri** | Rust ＋ WebView2。画面は HTML/JS、トレイは `tray-icon` 機能、裏の待ちは Rust のスレッド ＋ イベント | tauri 2.11.6、tauri-cli 2.11.5、rusqlite 0.40.2（bundled） |
 | **wpf** | C# ＋ WPF。トレイは WinForms の `NotifyIcon`（WPF 単体にトレイは無い）、裏の待ちは `Task.Run` | .NET 10、Microsoft.Data.Sqlite 10.0.12 |
 
 ## 結果（S1〜S7）
 
 最終の計測は3候補とも同じ `check.py` で、2026-09-23 16:24 前後に続けて行った。**3候補とも7項目すべて「可」。**
+pyside6 は Python 3.14.7 に作り直した venv でもう一度測り、7項目すべて「可」だった（S5 の打つ回の最大間隔 23ms、ドラッグを含む回 198ms）。
 
 | 項目 | pyside6 | tauri | wpf | 手段 |
 |---|---|---|---|---|
@@ -62,16 +64,18 @@ cat spikes/<候補>/run-check/result.txt  # S4 と S6 の行
 
 | 候補 | 起動 | プロセス数 | 作業セット | private |
 |---|---|---|---|---|
-| pyside6 | 約 510ms | 1 | 85MB | 32MB |
+| pyside6（Python 3.11.9） | 約 510ms | 1 | 85MB | 32MB |
+| pyside6（Python 3.14.7） | 約 665ms | 1 | 89MB | 38MB |
 | tauri | 約 565ms | 7（WebView2 の子を含む） | 393MB | 169MB |
 | wpf | 約 865ms | 1 | 149MB | 81MB |
 
-## 机上の事実（測っていない）
+## S1〜S7 の外の事実
 
 - Anthropic の公式 SDK があるのは Python・TypeScript・Java・Go・Ruby・C#・PHP。**Rust には無い**（claude-api スキル、2026-09-23 確認）。
   tauri で LLM を呼ぶには、Rust から生の HTTP で呼ぶか、TypeScript の SDK を WebView か Node の副プロセスで動かすことになる。
   WebView で動かすと API キーが画面側のプロセスに入る。
-- Python の標準 `sqlite3`（3.45.1）で FTS5 の trigram 分割が使え、日本語の部分一致（「話の続」→「昨日の話の続き」）が引けた（2026-09-23 実行）。
+- Python の標準 `sqlite3` で FTS5 の trigram 分割が使え、日本語の部分一致（「話の続」→「昨日の話の続き」）が引けた。
+  3.11.9（SQLite 3.45.1）と 3.14.7（SQLite 3.53.1）の両方で実行した（2026-09-23）。
 - pyside6 の窓はタスクバーにボタンを出していた（UI オートメーションの一覧に「Python - 1 の実行中ウィンドウ」。他の2候補は見ていない）。
   常駐する相棒がタスクバーに出るかは、段1の設計で決める。
 - Windows 11 は新しいトレイのアイコンを「隠れているインジケーター」に入れる。主人がタスクバーに出すまで、アイコンは1段奥にある。

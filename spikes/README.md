@@ -17,7 +17,7 @@
 
 | 候補 | 用意 | 実行ファイル |
 |---|---|---|
-| pyside6 | `uv venv --python 3.11 spikes/pyside6/.venv` → `uv pip install --python spikes/pyside6/.venv/Scripts/python.exe PySide6==6.11.2` | `spikes/pyside6/.venv/Scripts/python.exe spikes/pyside6/spike.py` |
+| pyside6 | `uv venv --python 3.14 spikes/pyside6/.venv` → `uv pip install --python spikes/pyside6/.venv/Scripts/python.exe PySide6==6.11.2` | `spikes/pyside6/.venv/Scripts/python.exe spikes/pyside6/spike.py` |
 | tauri | `cd spikes/tauri && npm install && npx tauri build --no-bundle`（Rust stable-msvc・VS 2022 の C++ ビルドツール・WebView2） | `spikes/tauri/src-tauri/target/release/spike-tauri.exe` |
 | wpf | `dotnet build -c Release spikes/wpf`（.NET SDK 10） | `spikes/wpf/bin/Release/net10.0-windows/SpikeWpf.exe` |
 
