@@ -5,12 +5,6 @@ from anthropic import AsyncAnthropic
 
 from . import REPO
 
-# 人格はまだ無い（T2 で根っこを入れる）。固定の指示だけで話す。
-INSTRUCTIONS = (
-    "あなたは主人のデスクトップに常駐する相棒です。まだ人格は決まっていません。"
-    "日本語で、短く自然に返事をしてください。気持ちを括弧書きで書かないでください。"
-)
-
 
 def _api_key():
     if "ANTHROPIC_API_KEY" in os.environ:
@@ -31,11 +25,14 @@ class Llm:
         self.effort = config["effort"]
         self.max_tokens = config["max_tokens"]
 
-    async def reply(self, history: list[tuple[str, str]], on_text):
-        """history は古い順の (speaker, body)。届いた文字を on_text に渡し、(本文, stop_reason) を返す。
+    async def reply(self, system: list[dict], history: list[tuple[str, str]], on_text, cue: str | None = None):
+        """system は文脈の前半（区切りは組む側が付ける）。history は古い順の (speaker, body)。
+        cue は保存しない主人側の合図（最初の挨拶）。届いた文字を on_text に渡し、(本文, stop_reason, usage) を返す。
 
         過去の返事は本文の文字だけを渡す（思考のブロックは渡さない。design.md §4.2）。
         """
+        if cue:
+            history = [*history, ("master", cue)]
         messages = []
         for speaker, body in history:
             role = "user" if speaker == "master" else "assistant"
@@ -50,7 +47,7 @@ class Llm:
         async with self.client.messages.stream(
             model=self.model,
             max_tokens=self.max_tokens,
-            system=INSTRUCTIONS,
+            system=system,
             messages=messages,
             output_config={"effort": self.effort},
         ) as stream:
@@ -58,6 +55,6 @@ class Llm:
                 on_text(text)
             final = await stream.get_final_message()
         if final.stop_reason == "refusal":
-            return None, final.stop_reason
+            return None, final.stop_reason, final.usage
         body = "".join(b.text for b in final.content if b.type == "text")
-        return body, final.stop_reason
+        return body, final.stop_reason, final.usage

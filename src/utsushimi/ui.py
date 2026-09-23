@@ -3,8 +3,10 @@ import logging
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap, QTextCursor
-from PySide6.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QMenu, QPushButton, QSystemTrayIcon,
-                               QTextEdit, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QMenu, QMessageBox, QPushButton,
+                               QSystemTrayIcon, QTextEdit, QVBoxLayout, QWidget)
+
+from . import DATA
 
 log = logging.getLogger("utsushimi")
 
@@ -120,6 +122,27 @@ class ChatWindow(QWidget):
     def on_reply_failed(self, reason):
         self.on_reply_text(f"（うまく返せなかった：{reason}）")
         self.on_reply_done()
+
+
+def notify_persona_broken(core, lines):
+    """人格のファイルが壊れている（BH-25）。閉じたら終わる。"""
+    box = QMessageBox(QMessageBox.Critical, "Utsushimi", "人格のファイルが壊れているため、起動を止めます。",
+                      QMessageBox.Close)
+    box.setInformativeText("\n".join(lines) + f"\n\n直してから、もう一度起動してください。\n場所：{DATA / 'persona'}")
+    box.exec()
+    core.shutdown("persona_broken")
+
+
+def ask_reseal(core, kind):
+    """固めた時から変わっている／まだ固めていない（BH-21）。固め直すかは主人が選ぶ。"""
+    text = ("人格のファイル（core.md・style.md）が、固めた時から変わっています。" if kind == "changed"
+            else "人格のファイル（core.md・style.md）は、まだ固められていません。")
+    box = QMessageBox(QMessageBox.Question, "Utsushimi", text)
+    box.setInformativeText("この内容で固め直すと、次の起動からは知らせません。")
+    reseal = box.addButton("この内容で固め直す", QMessageBox.AcceptRole)
+    box.addButton("このまま使う", QMessageBox.RejectRole)
+    box.exec()
+    core.answer_seal(box.clickedButton() is reseal)
 
 
 def make_tray(win, core):

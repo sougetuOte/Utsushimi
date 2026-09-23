@@ -21,6 +21,12 @@ CREATE TABLE IF NOT EXISTS lifecycle(
     ended_at TEXT,
     via TEXT
 );
+CREATE TABLE IF NOT EXISTS persona_seal(
+    id INTEGER PRIMARY KEY,
+    at TEXT NOT NULL,
+    core_sha TEXT NOT NULL,
+    style_sha TEXT NOT NULL
+);
 """
 
 
@@ -66,6 +72,17 @@ class Memory:
             rows = self.db.execute(
                 "SELECT speaker, body FROM utterances ORDER BY id DESC LIMIT ?", (limit,)).fetchall()[::-1]
         return rows
+
+    def last_seal(self) -> dict[str, str] | None:
+        """最後に固めたときのハッシュ。まだ固めていなければ None。"""
+        row = self.db.execute("SELECT core_sha, style_sha FROM persona_seal ORDER BY id DESC LIMIT 1").fetchone()
+        return None if row is None else {"core.md": row[0], "style.md": row[1]}
+
+    def add_seal(self, hashes: dict[str, str]):
+        """固め直しは行を足すだけ（前の封は残る）。"""
+        self.db.execute("INSERT INTO persona_seal(at, core_sha, style_sha) VALUES(?, ?, ?)",
+                        (_now(), hashes["core.md"], hashes["style.md"]))
+        self.db.commit()
 
     def close(self):
         self.db.close()

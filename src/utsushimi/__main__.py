@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QApplication
 
 from . import DATA
 from .core import Core
-from .ui import ChatWindow, make_tray
+from .ui import ChatWindow, ask_reseal, make_tray, notify_persona_broken
 
 log = logging.getLogger("utsushimi")
 
@@ -42,11 +42,17 @@ def main():
         win.hide()
         tray.hide()
 
-    core.signals.hide_all.connect(hide_all)
-    core.signals.finished.connect(app.quit)
+    def ready():
+        tray.show()
+        win.show_window("start")
+
+    s = core.signals
+    s.persona_broken.connect(lambda lines: notify_persona_broken(core, lines))
+    s.persona_ask.connect(lambda kind: ask_reseal(core, kind))
+    s.ready.connect(ready)
+    s.hide_all.connect(hide_all)
+    s.finished.connect(app.quit)
     core.start()
-    tray.show()
-    win.show_window("start")
     code = app.exec()
     core.thread.join(timeout=5)
     sys.exit(code)
