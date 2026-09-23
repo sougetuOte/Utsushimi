@@ -43,7 +43,7 @@ Windows 11 で常駐する、テキスト主体のデスクトップの相棒。
 前身は `C:\work5\Kage-Shiki`（Python。Phase 2b の途中で止まっている）。
 **前身からはコンセプト・基本設計・完成形だけを引き継ぎ、コードは持ち込まない。**技術選定は決め直す。
 
-前身は**読むだけ。改変しない。**何をどう抜き出すかは `docs/handoff/phase0-brief.md`。
+前身は**読むだけ。改変しない。**抜き出した物は `docs/concept.md`・`docs/behaviors.md`・`docs/lessons.md`。
 
 ## 2. 作法
 

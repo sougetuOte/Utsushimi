@@ -74,7 +74,6 @@
 ## 未決（主人の判断待ち）
 
 - 前身 Kage-Shiki（public）の README に後継の一行を入れる時期（Utsushimi が形になってから）
-- `CLAUDE.md:46` が消した `docs/handoff/phase0-brief.md` を指している。直すかどうか（G2）
 
 ## 未決（実測・作業待ち）
 
