@@ -39,11 +39,3 @@ Thumbs.db
 
 # 主人のローカル専用（CLAUDE.local.md は Claude Code が自動で読む。チートシートなど）
 *.local.md
-
-# Phase 1 スパイク（使い捨て。依存物と実行時の記録は載せない）
-spikes/**/run*/
-spikes/tauri/src-tauri/gen/
-node_modules/
-target/
-bin/
-obj/

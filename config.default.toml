@@ -1,0 +1,9 @@
+# Utsushimi の設定の既定値（git に載る。秘密を書かない）。
+# 起動時に data/config.toml が無ければ、このファイルを写して作る。主人が変えるのは data/config.toml の方。
+
+[llm]
+# ADR 0003：段1は1つのモデルを役割ごとの effort で使い分ける
+model = "claude-opus-5-5"
+# 対話の effort（low / medium / high / xhigh / max）。このモデルの既定は medium なので明示する
+effort = "medium"
+max_tokens = 16000
