@@ -1,0 +1,10 @@
+# 作業コピーの改行を LF に固定する（2026-09-23）。
+# core.autocrlf=true のままだと checkout で作業コピーが CRLF になり、
+# LF を書く編集ツールが1行直した瞬間に全行差分になる。フック（sh）も CRLF では動かない。
+# 消滅条件: CRLF を要求するツールが入って実害が出たら、その拡張子だけ外す。
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.db binary
+*.sqlite binary

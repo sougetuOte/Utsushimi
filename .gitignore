@@ -1,0 +1,41 @@
+# 秘密情報（public リポジトリ）
+.env
+.env.*
+!.env.example
+
+# キャラと記憶のデータ（主人の私物。git に載せない）
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ログ
+*.log
+logs/
+
+# OS / エディタ
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Claude Code（個人設定）
+.claude/settings.local.json
+
+# 主人のローカル専用の指示（Claude Code が自動で読む）
+CLAUDE.local.md

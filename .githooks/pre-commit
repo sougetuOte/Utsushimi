@@ -1,0 +1,72 @@
+#!/bin/sh
+# G2 第2層 — 統治文書の変更が黙って起きることを止める。
+#
+# 判定式と下の理由書きは、実測と主人の判断に由来する（2026-09-23 配置）。
+#
+# なぜフックか: git は staged なパス一覧を自分で持っているため、判定に推測が要らない。
+# ここだけが決定的にできる層である（ベンダーの解析器によるパス判定は確率的）。
+#
+# なぜ deny ではないか: `.claude/settings.json` の permissions.deny で goal.md への
+# 「書込」を止めると、毎フェーズの面接で goal.md が書けなくなる。だから書込ではなく
+# 「コミットに載ること」を止める。
+#
+# trap '' PIPE が先頭にある理由（消すな）:
+#   stderr に書いてから exit 1 する構造のため、`git commit … | head` でパイプの読み口が
+#   先に閉じると、フックは exit 1 に到達する前に SIGPIPE で死ぬ。native の git.exe は
+#   シグナル死の下位8ビット（0）しか見ないので、コミットを作ってしまう。
+#   実測で、素のフックは すり抜け 10/10、修正後は 阻止 10/10。
+#
+# .claude/skills/ を含む理由: スキルは条件が合うたびに文脈へ注入される常設の指示であり、
+# 性質は CLAUDE.md に近い。作業道具ではなく規範の側に置く（主人の判断、2026-09-13）。
+#
+# .claude/agents/ を含む理由: エージェント定義も、呼ばれるたびに接地として注入される常設の
+# 指示である。スキルと性質が変わらないので同じ側に置く（主人の判断、2026-09-20）。
+#
+# .claude/workflows/ を含む理由: workflow は起動1回の承認で、以降のエージェントが無承認で
+# 走る（公式ドキュメント「No mid-run user input」／段の間に承認が要るなら段ごとに別の
+# workflow にせよ、と明記されている）。規範性はスキルより高いのに、判定式が見ていなかった。
+# .claude/commands/ はスキルの旧形式で、同じ物が置ける（主人の判断、2026-09-22）。
+#
+# 買えるのは「事故の防止」であって「意図の防止」ではない。--no-verify、
+# core.hooksPath の解除、このファイルの書き換え、承認変数の自己付与で越えられる。
+# 穴は塞がない（列挙し切れない）。このゲートが変えるのは、統治文書の変更が
+# 黙って起きるか、diff とコマンド列に残る明示的な行為になるかである。
+#
+# 承認して通すとき:
+#   sh   : UTSUSHIMI_G2=approved git commit ...
+#   PS   : $env:UTSUSHIMI_G2="approved"; git commit ...; $env:UTSUSHIMI_G2=$null
+#          （PowerShell に VAR=value cmd の形は無い。消す所までが1行。
+#            残せばそれが常設の自己承認になる）
+
+trap '' PIPE
+
+if [ "$UTSUSHIMI_G2" = "approved" ]; then
+	exit 0
+fi
+
+# --no-renames: rename を「旧パスの削除＋新パスの追加」として出す。
+#   R で1行にまとめられると、保護対象からの改名がすり抜ける。
+# -z: NUL 区切り。非 ASCII のパス名が quote されて判定式から外れるのを防ぐ。
+PROTECTED_RE='^(goal\.md|CLAUDE\.md|SESSION_STATE\.md|\.githooks/|\.claude/skills/|\.claude/agents/|\.claude/workflows/|\.claude/commands/|\.claude/settings([^/]*)\.json)'
+
+hits=$(git diff --cached --name-only --no-renames -z | tr '\0' '\n' | grep -E "$PROTECTED_RE" || true)
+
+if [ -n "$hits" ]; then
+	{
+		echo ""
+		echo "G2: 統治文書を含むコミットを拒否した。"
+		echo ""
+		echo "対象:"
+		echo "$hits" | sed 's/^/  - /'
+		echo ""
+		echo "これらは「規範」であって成果物ではない。規範の対象者が黙って規範を"
+		echo "書き換えないための門である。主人の承認を取ってから、次で通す:"
+		echo ""
+		echo "  sh : UTSUSHIMI_G2=approved git commit ..."
+		echo "  PS : \$env:UTSUSHIMI_G2=\"approved\"; git commit ...; \$env:UTSUSHIMI_G2=\$null"
+		echo ""
+	} >&2
+	exit 1
+fi
+
+exit 0
