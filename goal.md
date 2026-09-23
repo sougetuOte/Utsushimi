@@ -57,7 +57,7 @@
 | V7 | 7 | `docs/smoke-test.md` があり、1〜5 の各項目と、目視チェックリストの節がある。報告に全項目の実施日と結果（可／不可）がある |
 | V8 | 8 | 報告に目視の結果が書かれ、`data/smoke/t1/` に会話の窓のスクリーンショットが1枚以上ある（検収役が画像を見て、はみ出し・重なりが無いことを確かめる） |
 | V9 | 9 | `test ! -e spikes`。`git ls-files spikes` が0件。研究文書に `spikes/` を消した旨の行がある |
-| V10 | 10 | `git log -p b286075..<最後の成果コミット>` に `sk-ant` が0件。`data/logs/utsushimi.log` に `sk-ant` が0件。成果コミットに `.env`・`data/`・`.venv/` のパスが無い |
+| V10 | 10 | `git log -p b286075..<最後の成果コミット>` を `grep -E 'sk-ant-[A-Za-z0-9]'` で見て0件（2026-09-23 主人承認で訂正：元の句は本行自身の字面に当たった）。`data/logs/utsushimi.log` に `sk-ant` が0件。成果コミットに `.env`・`data/`・`.venv/` のパスが無い |
 | V11 | 範囲 | `git diff --name-only b286075..<最後の成果コミット>` が、`goal.md`・`pyproject.toml`・`uv.lock`・`.python-version`・`config.default.toml`・`src/`・`docs/`・`spikes/`（削除）・`README.md`・`.gitignore` の下だけ |
 | V12 | やらないこと | 前身に書き込んでいない：`git -C C:\work5\Kage-Shiki rev-parse --short HEAD` が `39b030f` |
 | V13 | 品質 | 成果の Markdown に制御文字 `[\x00-\x08\x0b\x0c\x0e-\x1f]` が無い |
