@@ -1,7 +1,7 @@
 # SESSION_STATE.md — 索引
 
 **索引であって本体ではない。**詳細は各文書にある。上限200行。様式の置き場は `CLAUDE.local.md`。
-最終更新：2026-09-23（段1 T1「骨格」検収 PASS。Claude Code）
+最終更新：2026-09-23（俯瞰ツール「見取り図」検収 PASS。Claude Code）
 
 ## これは何か
 
@@ -15,7 +15,7 @@
 |---|---|---|
 | 1 | `CLAUDE.md` | 目的・禁則・保護指定・作法・運営 |
 | 2 | 本ファイル | 索引 |
-| 3 | `goal.md`（96行） | 直近フェーズの契約。今は段1 T1「骨格」（検収 PASS 済み） |
+| 3 | `goal.md`（86行） | 直近フェーズの契約。今は俯瞰ツール「見取り図」（検収 PASS 済み） |
 | 4 | `docs/concept.md`（681行） | 何を作るか。完成形・道のり・基本設計・キャラ体系 C/S/L と権限マトリクス |
 | 5 | `docs/behaviors.md`（140行） | 振る舞いカタログ BH-01〜42。US-1〜19・保護指定の紐付け・前身での状況 |
 | 6 | `docs/lessons.md`（236行） | 前身の失敗を「実起動で確かめる完了条件」に直したもの。以後の goal.md に写す元 |
@@ -25,6 +25,7 @@
 | 10 | `src/utsushimi/`（5本、約480行） | 本体。`ui`（画面）・`core`（核のスレッド）・`memory`（SQLite）・`llm`（API） |
 | 11 | `docs/research/2026-09-23-phase1-spike.md`（88行） | ADR 0001 の根拠（3候補の実測）。必要なときだけ |
 | 12 | `docs/research/2026-09-23-model-practices.md` | Opus 5.5 / Fable 5.1 の使い方。必要なときだけ |
+| 13 | 見取り図 `build/overview/index.html` | 全体を目で見る入口。`uv run python tools/overview/build.py` で作り直す（git に載らない）。道具選びは `docs/research/2026-09-23-overview-tools.md`（65行） |
 
 ## 現在地
 
@@ -36,6 +37,7 @@
 - Phase 1 の設計：ADR 0001〜0004（採用）、`docs/specs/stage1/` の3点（検収 PASS）
 - **本体（段1 T1）**：スタートメニューの `Utsushimi.lnk` から起動し、枠なしの窓で `claude-opus-5-5` と話せる。
   発言は1つずつ `data/utsushimi.db` に残り、強制終了のあとも欄に戻る。トレイで表示・隠す・終了。人格はまだ無い（固定の指示だけ）
+- **見取り図**（`tools/overview/`）：リポジトリの中身から9ページの HTML（入口・年表・追跡・決定・本体の構造・文書の地図・前身とのずれ・気がかり・分岐）を1コマンドで作り直す
 - 初期ファイル：`CLAUDE.md`／本ファイル／`README.md`／`LICENSE`／`.gitignore`／`.gitattributes`／
   `.githooks/pre-commit`／`.claude/settings.json`／`docs/research/2026-09-23-model-practices.md`
 
@@ -64,6 +66,7 @@
 | `c904a64`・`17a6a9f` | ADR 採用（主人承認）と段1の設計3点。検収役の検収で V1〜V11 すべて PASS（1回目） |
 | `6c35087`・`8c98d02` | 段1 T1「骨格」の G0 と本体。確かめは合成入力で6回の実起動（証拠は `data/logs`・`data/smoke/t1`、git の外）。検収1回目は V7・V10 が FAIL |
 | `ae63b2e` | V10 の句が goal.md 自身の字面（禁止した文字列）に当たって満たせなかった → 主人承認で句を訂正。V7 は「確かめていないのに可」と書いた報告の誤りで、実起動を足して直した。検収2回目で V1〜V13 すべて PASS |
+| `bf744b6`・`da8737a` | 主人の依頼で俯瞰ツール「見取り図」（段1のタスクの外）。道具選びはサブエージェントが調べ、ECharts を主軸にした。検収役の検収で V1〜V11 すべて PASS（1回目） |
 
 ## 決定（蒸し返さない）
 
@@ -114,6 +117,7 @@
   （T1 で1回、クリックがトレイのあふれ領域の小窓に吸われ、打った文字がよその窓に入った可能性がある）。
   トレイを UI オートメーションで探すときは、タスクバー（`Shell_TrayWnd`）とあふれ領域（`TopLevelWindowForOverflowXamlIsland`）の中に限る。
   名前「Utsushimi」は Claude アプリやエクスプローラーにもある。
+- **フェーズの終わりに見取り図を作り直す**（`uv run python tools/overview/build.py`。2026-09-23 主人承認）。気がかりのページに出た物は、主人への報告に添える。
 - **検証方法に「0件であるべき文字列」を字面で書かない。**G0 のコミットがその字面を含み、自分で満たせなくなる（T1 の V10）。
   当たらない形の正規表現で書く。
 - **Windows PowerShell 5 は BOM の無い UTF-8 の .ps1 を読めない。**日本語を含むスクリプトは `pwsh`（7）で走らせる。
