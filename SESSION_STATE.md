@@ -1,7 +1,7 @@
 # SESSION_STATE.md — 索引
 
 **索引であって本体ではない。**詳細は各文書にある。上限200行。様式の置き場は `CLAUDE.local.md`。
-最終更新：2026-09-23（初期配置。Cowork が主人の依頼で作成）
+最終更新：2026-09-23（初回コミットと GitHub 公開。Claude Code）
 
 ## これは何か
 
@@ -23,20 +23,25 @@
 
 **動いている物**
 
-- git リポジトリ（`main`）。**コミット0本、remote なし**（GitHub に public で作る予定）
+- git リポジトリ（`main`）。remote は `origin` = https://github.com/sougetuOte/Utsushimi（public）
+- G2 フック：`core.hooksPath` を設定済み。止めることと、承認変数で通ることを実測した
 - 初期ファイル：`CLAUDE.md`／本ファイル／`README.md`／`LICENSE`／`.gitignore`／`.gitattributes`／
   `.githooks/pre-commit`／`.claude/settings.json`／`docs/handoff/phase0-brief.md`／`docs/research/2026-09-23-model-practices.md`
 
 **まだ無い物**
 
-- `core.hooksPath` の設定（`git config core.hooksPath .githooks`。リポジトリに載らない設定なので clone ごとに要る）
 - `goal.md`、抽出物（`docs/concept.md` ほか）、ADR、コード
+
+**clone したら要る物**（リポジトリに載らない）
+
+- `git config core.hooksPath .githooks`
+- `CLAUDE.local.md`（主人のローカルにだけある）
 
 ## これまで
 
 | コミット | 出来事 |
 |---|---|
-| （初回コミット前） | 2026-09-23 Cowork で初期ファイルを配置。前身を読んだ上で書いた |
+| `ed524b2` | 2026-09-23 初回コミット。Cowork が配置した初期ファイルを、公開前の点検を経て載せた。同日 GitHub に public で作成・push |
 
 ## 決定（蒸し返さない）
 
@@ -50,6 +55,7 @@
 | D6 | `data/`（キャラと記憶）と `.env` は git に載せない |
 | D7 | ライセンスは MIT（前身に揃えた。**Cowork の仮置き**で、主人が変えてよい） |
 | D8 | **モデルの既定は Opus 5.5。Phase 1（設計）も Opus 5.5 の high で行う**（2026-09-23 主人決定）。Fable 5.1 へは high で同じ問題に2回つまずいたときに上げる。根拠は `docs/research/2026-09-23-model-practices.md` |
+| D9 | **public 側に private リポジトリの存在を示唆しない。**具体的な参照は `CLAUDE.local.md`（git に載せない）に置く。G2 の承認変数は `UTSUSHIMI_G2`（2026-09-23 主人決定） |
 
 ## 採らなかった案
 
@@ -65,11 +71,11 @@
 
 ## 未決（実測・作業待ち）
 
-- G2 フックが Windows の git で実際に止めるか（初回コミットで確かめる）
+（なし）
 
 ## 次の一手
 
-**初回コミットと GitHub の作成。**その次が Phase 0「抽出」の面接（G0）。
+**Phase 0「抽出」の面接（G0）。**材料は `docs/handoff/phase0-brief.md`。
 
 ## 作業の作法
 
