@@ -19,8 +19,7 @@
 | 4 | `docs/concept.md`（681行） | 何を作るか。完成形・道のり・基本設計・キャラ体系 C/S/L と権限マトリクス |
 | 5 | `docs/behaviors.md`（140行） | 振る舞いカタログ BH-01〜42。US-1〜19・保護指定の紐付け・前身での状況 |
 | 6 | `docs/lessons.md`（236行） | 前身の失敗を「実起動で確かめる完了条件」に直したもの。以後の goal.md に写す元 |
-| 7 | `docs/handoff/phase0-brief.md` | Phase 0 の依頼書。消滅条件待ち（下の未決） |
-| 8 | `docs/research/2026-09-23-model-practices.md` | Opus 5.5 / Fable 5.1 の使い方。必要なときだけ |
+| 7 | `docs/research/2026-09-23-model-practices.md` | Opus 5.5 / Fable 5.1 の使い方。必要なときだけ |
 
 ## 現在地
 
@@ -30,7 +29,7 @@
 - G2 フック：`core.hooksPath` を設定済み。止めることと、承認変数で通ることを実測した
 - Phase 0 の抽出物：`docs/concept.md`／`docs/behaviors.md`／`docs/lessons.md`（検収 PASS）
 - 初期ファイル：`CLAUDE.md`／本ファイル／`README.md`／`LICENSE`／`.gitignore`／`.gitattributes`／
-  `.githooks/pre-commit`／`.claude/settings.json`／`docs/handoff/phase0-brief.md`／`docs/research/2026-09-23-model-practices.md`
+  `.githooks/pre-commit`／`.claude/settings.json`／`docs/research/2026-09-23-model-practices.md`
 
 **まだ無い物**
 
@@ -48,6 +47,7 @@
 | `ed524b2` | 2026-09-23 初回コミット。Cowork が配置した初期ファイルを、公開前の点検を経て載せた。同日 GitHub に public で作成・push |
 | `3789fca` | Phase 0「抽出」の G0。依頼書の Must 一覧が実物と違った（US-6 は Must でなく、2a の US-8/9/11/12 が Must）ため、US-1〜19 全件＋保護指定の紐付けに改めて承認 |
 | `e68ff23` | Phase 0 の成果3本。columba 検収で V1〜V11 すべて PASS（1回目） |
+| （本コミット） | 主人が Phase 0 の完了を認め、依頼書 `docs/handoff/phase0-brief.md` を消滅条件どおり消した |
 
 ## 決定（蒸し返さない）
 
@@ -74,8 +74,7 @@
 ## 未決（主人の判断待ち）
 
 - 前身 Kage-Shiki（public）の README に後継の一行を入れる時期（Utsushimi が形になってから）
-- Phase 0 の完了を認めるか（認めたら `docs/handoff/phase0-brief.md` を消す ── 同文書の消滅条件）
-- `3789fca` 以降の push（主人の同意を得てから）
+- `CLAUDE.md:46` が消した `docs/handoff/phase0-brief.md` を指している。直すかどうか（G2）
 
 ## 未決（実測・作業待ち）
 
