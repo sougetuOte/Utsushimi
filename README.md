@@ -37,6 +37,15 @@
 
 Claude Code で開発しています。方針は [`CLAUDE.md`](CLAUDE.md)、現在地は [`SESSION_STATE.md`](SESSION_STATE.md) にあります。
 
+**見取り図**：プロジェクトの発端から今までを、年表・追跡・決定・本体の構造・文書の地図・前身とのずれ・気がかり・分岐の角度から見る HTML 群です。
+リポジトリの今の中身（git の履歴と、git に載った文書・コード）から作り直します。生成物は git に載りません。
+
+```
+uv run python tools/overview/build.py
+```
+
+できた `build/overview/index.html` をブラウザで開きます。図のライブラリは CDN から読むので、ネットにつながっている必要があります。
+
 ## ライセンス
 
 MIT
