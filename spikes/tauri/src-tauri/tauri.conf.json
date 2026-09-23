@@ -1,0 +1,14 @@
+{
+  "productName": "spike-tauri",
+  "version": "0.0.0",
+  "identifier": "local.utsushimi.spike",
+  "build": { "frontendDist": "../ui" },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      { "title": "utsushimi-spike-tauri", "width": 380, "height": 260, "decorations": false, "resizable": false }
+    ],
+    "security": { "csp": null }
+  },
+  "bundle": { "active": false, "icon": ["icons/icon.ico"] }
+}
