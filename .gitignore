@@ -37,5 +37,5 @@ Thumbs.db
 # Claude Code（個人設定）
 .claude/settings.local.json
 
-# 主人のローカル専用の指示（Claude Code が自動で読む）
-CLAUDE.local.md
+# 主人のローカル専用（CLAUDE.local.md は Claude Code が自動で読む。チートシートなど）
+*.local.md
