@@ -38,7 +38,7 @@
 
 1. 1往復話し、ログに `reply id=N` が出たら、すぐ `taskkill /F /PID <ログの pid>` で落とす。
 2. もう一度 S-1 の方法で起動し、欄にその発言と返事が残っていることを見る。
-3. ログの新しい `start` 行が `prev_shutdown=unclean` で、`loaded=` が N 以上であることを見る。
+3. ログの新しい `start` 行が `prev_shutdown=unclean` で、`loaded=` が、`utterances` の番号 N までにある種類 `dialogue` の発言の数以上であることを見る（キャラ作りのお試しの発言 `trial` は数えない）。
 
 ### S-4 トレイと終了（T1。BH-03・Bug-6）
 
