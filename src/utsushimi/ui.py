@@ -288,6 +288,8 @@ class CreationWindow(QWidget):
 
     def on_method(self):
         self.text.setPlaceholderText(METHOD_HINTS[self.method()])
+        # Qt は案内を出す／消すが替わるときにしか描き直さない。案内を出したまま文だけ替えたので、ここで描き直す
+        self.text.viewport().update()
 
     def make(self):
         text = self.text.toPlainText().strip()
