@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QApplication
 
 from . import DATA
 from .core import Core
-from .ui import ChatWindow, ask_reseal, make_tray, notify_persona_broken
+from .ui import ChatWindow, CreationWindow, ask_reseal, make_tray, notify_persona_broken
 
 log = logging.getLogger("utsushimi")
 
@@ -36,15 +36,19 @@ def main():
     app.setQuitOnLastWindowClosed(False)
     core = Core(console)
     win = ChatWindow(core)
+    creation = CreationWindow(core)
     tray = make_tray(win, core)
 
     def hide_all():
         win.hide()
+        creation.hide()
         tray.hide()
 
-    def ready():
+    def ready(via):
+        if via == "creation":  # 確定した：起動し直さずに会話の窓へ替わる
+            creation.finish()
         tray.show()
-        win.show_window("start")
+        win.show_window(via)
 
     s = core.signals
     s.persona_broken.connect(lambda lines: notify_persona_broken(core, lines))

@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS utterances(
     at TEXT NOT NULL,
     speaker TEXT NOT NULL,   -- master / companion
     body TEXT NOT NULL,
-    kind TEXT NOT NULL       -- dialogue（段1の後のタスクで poke / trial を足す）
+    kind TEXT NOT NULL       -- dialogue / trial（キャラ作りのお試し）。突っつき poke は T7 で足す
 );
 CREATE TABLE IF NOT EXISTS lifecycle(
     id INTEGER PRIMARY KEY,
@@ -64,14 +64,19 @@ class Memory:
         self.db.commit()
         return cur.lastrowid
 
-    def utterances(self, limit: int | None = None) -> list[tuple[str, str]]:
-        """古い順の (speaker, body)。limit を渡すと直近の limit 件。"""
+    def utterances(self, limit: int | None = None, kind: str = "dialogue", after: int = 0) -> list[tuple[str, str]]:
+        """古い順の (speaker, body)。種類が kind で、番号が after より後のものだけ。limit を渡すと直近の limit 件。"""
         if limit is None:
-            rows = self.db.execute("SELECT speaker, body FROM utterances ORDER BY id").fetchall()
+            rows = self.db.execute("SELECT speaker, body FROM utterances WHERE kind = ? AND id > ? ORDER BY id",
+                                   (kind, after)).fetchall()
         else:
             rows = self.db.execute(
-                "SELECT speaker, body FROM utterances ORDER BY id DESC LIMIT ?", (limit,)).fetchall()[::-1]
+                "SELECT speaker, body FROM utterances WHERE kind = ? AND id > ? ORDER BY id DESC LIMIT ?",
+                (kind, after, limit)).fetchall()[::-1]
         return rows
+
+    def last_id(self) -> int:
+        return self.db.execute("SELECT COALESCE(MAX(id), 0) FROM utterances").fetchone()[0]
 
     def last_seal(self) -> dict[str, str] | None:
         """最後に固めたときのハッシュ。まだ固めていなければ None。"""

@@ -9,6 +9,16 @@
 - ログは `data/logs/utsushimi.log`（1行1出来事。各行に時刻・`pid=`・`thread=`）。発言は `data/utsushimi.db` の `utterances`。
   どちらも足されるだけなので、確かめた起動は `pid=` で引く。
 - 本アプリのプロセスは `pythonw.exe`（venv の起動器と実体の2つが並ぶことがある。ログの `pid=` は実体）。
+- データを分けて起動し直すとき（T3）は、本アプリを終えてから `data/utsushimi.db`（と `-wal`・`-shm`）と `data/persona/` を
+  `data/smoke/t3/<名前>/` へ移す。ログは移さない（`pid=` で引ける）。消さない。
+- 確かめ用の設定（T3）は `data/config.toml` に書き、終わったら元の中身に戻す。
+  - 連想の数：`[creation]` の `associations = 3` など（既定5）
+  - 偽物の呼び先：`[llm]` の `target = "fake"`。核の乱数の種は `[creation]` の `seed = 7` など（種を読むのは偽物のときだけ）
+- API を呼ばないことや失敗を確かめる起動（T3）は、本アプリのプロセスにだけダミーの `ANTHROPIC_API_KEY` を渡す（PowerShell）：
+
+  ```powershell
+  $p = Start-Process .venv\Scripts\pythonw.exe -ArgumentList '-m','utsushimi' -WorkingDirectory . -PassThru -Environment @{ANTHROPIC_API_KEY='dummy'}
+  ```
 
 ## 項目
 
@@ -46,7 +56,7 @@
 
 ### S-6 固めた人格で話す（T2。BH-24・BH-19・BH-01）
 
-1. `data/persona/core.md`・`style.md` を置き（見出しは `## C1 名前` 〜 `## C11 …`、`## S1 日常会話` 〜 `## S7 沈黙破り`）、固めた状態にしておく（S-8）。
+1. キャラ作り（S-11）で固めた人格か、手で置いて固めた人格（見出しは `## C1 名前` 〜 `## C11 …`、`## S1 日常会話` 〜 `## S7 沈黙破り`。S-8）を用意する。
 2. 起動して、キャラの最初の挨拶が出るのを待ってから、10往復話す。
 3. 返事10件に、括弧でくくったト書き（「（嬉しそうに）」の類）が1つも無いことを見る。`utterances` の返事の本文に `[（(][^）)]*[）)]` の当たりが0件。
 4. トレイから終了し、`Get-FileHash -Algorithm SHA256 data\persona\core.md, data\persona\style.md` の値が、`persona_seal` の最後の行とその起動の `persona ok`・`persona at_exit` の値と同じことを見る。
@@ -77,6 +87,57 @@
 1. S-6 の起動のログで、`usage kind=reply` の行の `cache_read=` が、2行目以降すべて0より大きいことを見る
    （最初の挨拶 `usage kind=greet` がキャッシュを書くので、多くは1行目から効いている）。
 
+### S-11 人格が無ければキャラ作りから（T3。BH-06・BH-07・BH-09）
+
+1. `data/persona/` が無く、`data/utsushimi.db` も無い（または `persona_seal` に行が無い）状態で起動する。
+2. 会話の窓ではなく「Utsushimi：キャラ作り」の窓が出る（ログ `persona absent`・`creation show`）。トレイのアイコンはまだ出ない。
+3. 「おまかせ」を選び、キーワードを入れて「作る」→ 経過（連想・調べる語・候補をまとめる）が出たあと候補が並ぶ（`creation begin method=omakase`・`creation candidates n=3`）。
+4. 候補を選んでお試しで話し、「確定」→ 会話の窓に替わる（`persona sealed`・`show via=creation`）。設定ファイルもコマンドも触らない。
+5. データを分けて（前提）、「既存イメージ」でも同じく確定まで通す（`creation begin method=image`・`creation candidates n=1`）。
+
+### S-12 候補を選び、試し、戻り、作り直し、確定する（T3。BH-08・BH-42・B-9）
+
+1. おまかせで候補3体が、名前と人格核文つきで並ぶことを見る。
+2. 1体の「この子と話してみる」→ 見本を作ったあと、お試しの欄で3往復話す（`trial send id=`・`trial reply id=` が3組）。
+3. 「やり直す」→ 同じ候補3体の並びに戻る（`creation back`）。「作り直す」→ 経過のあと新しい候補3体が並ぶ（`creation redo`・`creation candidates n=3`）。
+4. 1体を選んで「確定」→ 起動し直さずに会話の窓に替わり、キャラの最初のひと言にその子の名前（C1）が付く。
+5. `Get-CimInstance Win32_Process -Filter "Name='pythonw.exe'"` で、ログの `pid=` の本体とその親（venv の起動器）のほかに本アプリが無いことを見る。
+6. `utterances` のお試しの発言の種類が `trial` で、会話の窓には出ていないことを見る。
+
+### S-13 同じキーワードから別のキャラ（T3。BH-10・BH-11）
+
+1. 同じ連想の数・同じキーワードで、データを分けて2回おまかせのキャラを作り、確定する。
+2. 2つの `data/.../persona/origin.md` に `## 日時`・`## モデル`・`## 方式`・`## 主人の入力`・`## 連想`・`## 調べた語`・`## 要点` があり、`## 主人の入力` は同じで、`## 連想` は違うことを見る。
+3. 2つの `core.md` の C1（名前）と C4（人格核文）が違うことを見る。
+4. どちらも、`## 要点` の語句のどれかが `core.md` か `style.md` の文に入っていることを見る（その語句で検索して当たる）。
+5. 2つの置き場の `core.md`・`style.md`・`origin.md` に乱数の種が無いことを見る（`Select-String -Pattern seed` が0件）。
+
+### S-14 連想の数を変える（T3。BH-41）
+
+1. `[creation] associations = 3` にしておまかせで確定まで通し、`origin.md` の `## 連想` が3行で、ログが `creation associations setting=3 ... chosen=3` であることを見る。
+2. データを分けて `associations = 7` で同じく通し、7行であることを見る。終わったら設定を戻す。
+
+### S-15 偽物の呼び先で、ゆらぎを止める（T3。BH-37・禁則）
+
+1. `[llm] target = "fake"`・`[creation] seed = 7` にして、ダミーのキーを渡して起動する（前提）。ログが `llm target=fake rng source=fixed`。
+2. おまかせで候補を選んで確定し、会話の窓で1往復話す。その起動に `usage` と `ERROR` の行が無いことを見る（API を呼んでいない）。
+3. データを分けて同じ設定・同じキーワード・同じ候補でもう一度通し、2回の `persona sealed core=` が同じであることを見る。終わったら設定を戻す。
+
+### S-16 既存イメージで書いた所が残る（T3。保護指定3）
+
+1. 既存イメージに、名前と一人称を含む記述（例：「名前は〇〇。一人称は△△。…」）を書いて確定まで通す。
+2. `core.md` の C1 に書いた名前が、C2 に書いた一人称が入っていて、`origin.md` の `## 主人の入力` が書いた記述と同じことを見る。
+
+### S-17 固めた人格のファイルが無いとき（T3。BH-19）
+
+1. 固めた後のデータで、本アプリを終えてから `data/persona/` だけを移す（DB は残す）。
+2. 起動する → キャラ作りの画面ではなく「壊れている」小窓が出る（`persona broken file=core.md heading=- reason=missing`・`file=style.md` の2行。`creation show` が無い）。閉じて、`data/persona/` を戻す。
+
+### S-18 閉じたら終わる・失敗したら戻る（T3）
+
+1. 人格の無い状態で起動し、キャラ作りの窓を閉じる → 数秒以内に本アプリのプロセスが残らない（`shutdown begin via=creation_close call=1`・`shutdown done`）。
+2. 人格の無い状態で、ダミーのキーを渡して（呼び先は `anthropic` のまま）起動し、キーワードを入れて「作る」→ 理由（`AuthenticationError`）が出て入力の画面に戻り、入れた言葉が残っている（`creation failed stage=associate`）。
+
 ## 画面の目視チェックリスト（L-5・B-11）
 
 画面に関わる変更をしたタスクでは、実起動して次を目で見る。
@@ -91,3 +152,12 @@
 
 - [ ] 壊れているときの小窓：知らせの文・壊れている所（ファイル名と見出し）・置き場のパスが欠けずに読め、「Close」が押せる
 - [ ] 変えられたときの小窓：知らせの文と「この内容で固め直す」「このまま使う」の2つのボタンが欠けずに読め、どちらも押せる
+
+キャラ作りの画面（T3）：
+
+- [ ] 方式と入力：説明・2つの方式・入力欄・「作る」が欠けずに読め、方式を替えると入力欄の案内が替わる
+- [ ] 経過：いまの段（連想・調べる語・候補・見本）の文と、動いている棒が見える
+- [ ] 候補：3体（既存イメージは1体）の名前と人格核文が欠けずに読め、「この子と話してみる」と「作り直す」が押せる
+- [ ] お試し：題・注意書き・やり取りの欄・入力欄・「送信」「やり直す」「確定」が欠けずに見え、返事を待つ間はボタンが押せない
+- [ ] 失敗：理由の文が読め、入力欄に入れた言葉が残っている
+- [ ] 確定の後の会話の窓：キャラの発言に、その子の名前（C1）が付いている
