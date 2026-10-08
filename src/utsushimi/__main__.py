@@ -2,7 +2,9 @@
 import ctypes
 import hashlib
 import logging
+import os
 import signal
+import subprocess
 import sys
 import threading
 from ctypes import wintypes
@@ -16,6 +18,7 @@ from .core import Core
 from .ui import ChatWindow, CreationWindow, ask_reseal, make_tray, notify_persona_broken
 
 log = logging.getLogger("utsushimi")
+WM_QUERYENDSESSION = 0x0011
 WM_ENDSESSION = 0x0016
 SESSION_END_WAIT = 4  # Windows がプロセスを止める前に、終了処理を待つ上限の秒数
 
@@ -51,6 +54,17 @@ def ask_first_to_show(name: str) -> bool:
     return True
 
 
+def detach() -> int:
+    """venv の起動器（窓を持たない）のジョブの外で、本アプリを起動し直す。子のプロセス番号を返す。
+
+    起動器のジョブは、起動器が終わると中のプロセスを道連れにする。Windows の終了では窓の無い起動器が先に止められ、
+    本アプリが終了の知らせを受け取る前に道連れになる（T5 の実測）。起動器のジョブは子が起動したプロセスを外に出すので、
+    元の Python から venv の設定のまま起動し直し、元のプロセスは終わる。
+    """
+    env = dict(os.environ, __PYVENV_LAUNCHER__=sys.executable, UTSUSHIMI_DETACHED="1")
+    return subprocess.Popen([sys._base_executable, "-m", "utsushimi", *sys.argv[1:]], env=env).pid
+
+
 class SessionEnd(QAbstractNativeEventFilter):
     """Windows のサインアウト・シャットダウン（WM_ENDSESSION）で終了処理を呼び、終わるまで待つ。"""
 
@@ -61,6 +75,8 @@ class SessionEnd(QAbstractNativeEventFilter):
 
     def nativeEventFilter(self, event_type, message):
         msg = wintypes.MSG.from_address(int(message))
+        if msg.message == WM_QUERYENDSESSION and not self.called:
+            log.info("session query")  # Windows の終了の知らせが届いた（届かずに止められたかを見分ける）
         if msg.message == WM_ENDSESSION and msg.wParam and not self.called:
             self.called = True  # WM_ENDSESSION は窓ごとに届くので、1回目だけ
             self.core.shutdown("session_end")
@@ -72,6 +88,9 @@ def main():
     setup_logging()
     threading.current_thread().name = "ui"
     console = "present" if ctypes.windll.kernel32.GetConsoleWindow() else "none"
+    if console == "none" and "UTSUSHIMI_DETACHED" not in os.environ:
+        log.info("detach child=%d", detach())  # この元のプロセスは何にも触れずに終わる
+        return
 
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
