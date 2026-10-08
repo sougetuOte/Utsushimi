@@ -98,6 +98,22 @@ class Llm:
             raise Unfinished(final.stop_reason)
         return json.loads("".join(b.text for b in final.content if b.type == "text"))
 
+    async def text(self, kind: str, system: list[dict], prompt: str) -> str:
+        """画面に流さない文を1回書かせる（日記）。使用量は kind でログに残す。"""
+        async with self.client.messages.stream(
+            model=self.model,
+            max_tokens=self.max_tokens,
+            system=system,
+            messages=[{"role": "user", "content": prompt}],
+            output_config={"effort": self.effort},
+        ) as stream:
+            final = await stream.get_final_message()
+        log_usage(kind, final.usage)
+        if final.stop_reason != "end_turn":
+            log.info("%s unfinished stop_reason=%s", kind, final.stop_reason)
+            raise Unfinished(final.stop_reason)
+        return "".join(b.text for b in final.content if b.type == "text")
+
     async def search(self, system: str, prompt: str, max_uses: int) -> tuple[str, list[str], int]:
         """サーバー側の web search（ADR 0003）で調べさせ、(本文, 検索した語句, 検索の回数) を返す。
 
@@ -160,6 +176,9 @@ class FakeLlm:
             return {"candidates": [dict(c, C4=c["C4"] + f"頼まれた文の指紋は {mark}。") for c in FAKE_CANDIDATES]}
         return FAKE_STYLE
 
+    async def text(self, kind, system, prompt):
+        return FAKE_DIARY
+
     async def search(self, system, prompt, max_uses):
         mark = hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:8]
         return f"- 偽物の呼び先が返した要点 {mark}\n- 灯台の光は遠くの船の目印になる\n", [], 0
@@ -170,6 +189,8 @@ class FakeLlm:
 
 FAKE_ASSOCIATIONS = ["朝焼け", "古い地図", "湯気の立つお茶", "猫の足音", "雨の図書館", "鉄道の時刻表", "小さな菜園",
                      "星座の名前", "手紙の封蝋", "波の音", "折り紙", "口笛", "古道具屋", "灯台", "夜の散歩", "木の実"]
+FAKE_DIARY = ("今日も主人と話をした。偽物の呼び先が書いた、確かめ用の日記だ。話の中身はここには入っていない。"
+              "それでも、一日が終わったことだけは残しておく。明日もまた話せるといい。")
 FAKE_CANDIDATES = [
     {"C1": "ツムギ", "C2": "わたし", "C3": "あなた",
      "C4": "糸を紡ぐように言葉を選ぶ、落ち着いた話し相手。偽物の呼び先が返した確かめ用の候補で、",

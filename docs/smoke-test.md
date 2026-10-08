@@ -19,6 +19,17 @@
   ```powershell
   $p = Start-Process .venv\Scripts\pythonw.exe -ArgumentList '-m','utsushimi' -WorkingDirectory . -PassThru -Environment @{ANTHROPIC_API_KEY='dummy'}
   ```
+- T4 からは、確かめの起動に `UTSUSHIMI_DATA` で置き場を渡し、主人の相棒が住む `data/` に触らない。
+  DB・人格・設定・ログはすべてその置き場の下に入る（ログは `<置き場>/logs/utsushimi.log`、起動のログに `data dir=env`）。
+  確かめの人格は、置き場の `persona/` に手で書いた `core.md`・`style.md` を置き、起動して「この内容で固め直す」で固める（T2 の道）：
+
+  ```powershell
+  $p = Start-Process .venv\Scripts\pythonw.exe -ArgumentList '-m','utsushimi' -WorkingDirectory . -PassThru -Environment @{UTSUSHIMI_DATA="$PWD\data\smoke\t4\<名前>"}
+  ```
+
+- 確かめ用の設定（T4）は、置き場の `config.toml` に書く。
+  - 1日の区切り：`[memory]` の `day_start = "14:05"` など（既定 `"00:00"`）。日付またぎは、これを数分先にして確かめる（Windows の時計は触らない）
+  - 文脈の上限：`[context]` の `limit = 6000` など（既定 30000。文字数）
 
 ## 項目
 
@@ -137,6 +148,43 @@
 
 1. 人格の無い状態で起動し、キャラ作りの窓を閉じる → 数秒以内に本アプリのプロセスが残らない（`shutdown begin via=creation_close call=1`・`shutdown done`）。
 2. 人格の無い状態で、ダミーのキーを渡して（呼び先は `anthropic` のまま）起動し、キーワードを入れて「作る」→ 理由（`AuthenticationError`）が出て入力の画面に戻り、入れた言葉が残っている（`creation failed stage=associate`）。
+
+### S-19 確かめのデータが分かれる（T4）
+
+1. `UTSUSHIMI_DATA` を渡して起動する（前提）。置き場の下に `utsushimi.db`・`config.toml`・`logs/utsushimi.log` ができ、ログに `data dir=env` がある。
+2. `data/logs/utsushimi.log` に、その起動の `pid=` の行が無いことを見る。
+
+### S-20 昔の話を引く（T4。BH-14）
+
+1. 置き場の `day_start` を数分先にして起動し、区切りの前に、ある話題（例：近所の金木犀が咲いた）について2〜3往復話して、トレイから終了する。
+2. 区切りの時刻を過ぎてから起動する。`warm n=` が1以上（前の日の日記が読まれた）。
+3. 「この前の〇〇の話、覚えてる？」と送る → 返事がその話題の中身に触れていて、`recall ids=` に前の日の発言の番号がある。
+4. その起動の `context kind=reply` の `today=` に、前の日の発言が数えられていない（区切りの後の発言の数を超えない）。
+
+### S-21 日記が3つの時にできる（T4。BH-15・Bug-5）
+
+1. 終了：起動して話し、トレイから終了する → `shutdown begin via=tray` の後に `diary created date=<今日> trigger=shutdown`、その後に `shutdown done`。
+2. 欠け埋め：別の置き場で、区切りを数分先にして起動して話し、`taskkill /F` で強制終了する。区切りを過ぎてから起動する → `diary created date=<前の日> trigger=startup`。
+3. 日付またぎ：区切りを数分先にして起動して話し、そのまま待つ → `day change to=` の後に `plan active name=diary`、`diary created date=<前の日> trigger=daychange`。
+4. どの置き場でも、`diaries` に同じ日付の行が2行以上無い。同じ日にもう一度終了すると `diary exists date=` が出て、行は増えない。
+
+### S-22 文脈の上限と削る順（T4。BH-17）
+
+1. 前の日の日記と昔の発言がある置き場で、`[context] limit` を小さく（人格の根っこと見本の文字数より少し大きく）して起動する。
+2. 前の日の話題に触れながら、上限を超えるまで話す → `context cut part=recall` → `part=diary` → `part=today` の順に出て、逆の順が無い。
+3. どの `context` の行も `fixed=` が0より大きく、`send id=` と `reply id=` の数が同じで、`ERROR` と `refused` が無い。終わったら設定を戻す。
+
+### S-23 入力で行動予定が引く（T4。L-1・保護指定2）
+
+1. 区切りを数分先にして起動して話し、区切りを過ぎたら `plan active name=diary` が出るのを待つ。
+2. `diary created` が出る前に送る → `plan inactive name=diary reason=input`・`plan cancel name=diary ms=` の後に `send id=` と `reply id=` が出て、`ERROR` が無い。
+3. 入力を60秒止める → `plan resume` の後に、同じ日付の `diary created ... trigger=daychange` が1行だけ出る。`ms=` の値を報告に書く。
+
+### S-24 前からある DB で動く（T4。B-8）
+
+1. `git worktree add <スクラッチ>\t3 19723f9` で T3 の本体を出し、そこで `uv sync` する。T3 の本体は `UTSUSHIMI_DATA` を読まずに worktree の `data/` を使うので、そこに `config.toml`（`target = "fake"`・`seed = 7`）を置いて起動する。おまかせで確定して2往復話し、終了する（`taskkill /F` でもよい）。
+2. worktree の `data/utsushimi.db`（`-wal`・`-shm` も）と `persona/` を T4 の置き場へ写す。写した発言が前の日に属するように、置き場の `day_start` を今の時刻（時:分）にして、T4 の本体で起動する（`ERROR` が無い）。
+3. 写す前からあった発言の語句で「この前の〇〇」と送る → `recall ids=` にその番号がある。終わったら `git worktree remove` で worktree を外す。
 
 ## 画面の目視チェックリスト（L-5・B-11）
 

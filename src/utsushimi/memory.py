@@ -1,6 +1,7 @@
 """記憶：SQLite（ADR 0002）。接続は核のスレッドだけが持つ（ADR 0004）。
 
-会話の記録は「足す」口だけを持ち、書き換える口を持たない（design.md §2）。
+会話の記録と日記は「足す」口だけを持ち、書き換える口を持たない（design.md §2）。
+時刻は `_now()` と同じ ISO 形式の文字列で渡し、文字列のまま比べる。
 """
 import sqlite3
 from datetime import datetime
@@ -21,6 +22,17 @@ CREATE TABLE IF NOT EXISTS lifecycle(
     ended_at TEXT,
     via TEXT
 );
+CREATE TABLE IF NOT EXISTS diaries(
+    id INTEGER PRIMARY KEY,
+    date TEXT NOT NULL UNIQUE,  -- 同じ日を2度作らない（Bug-5）
+    body TEXT NOT NULL,
+    at TEXT NOT NULL
+);
+CREATE VIRTUAL TABLE IF NOT EXISTS utterances_fts USING fts5(
+    body, content='utterances', content_rowid='id', tokenize='trigram');
+CREATE TRIGGER IF NOT EXISTS utterances_fts_add AFTER INSERT ON utterances BEGIN
+    INSERT INTO utterances_fts(rowid, body) VALUES (new.id, new.body);
+END;
 CREATE TABLE IF NOT EXISTS persona_seal(
     id INTEGER PRIMARY KEY,
     at TEXT NOT NULL,
@@ -40,7 +52,10 @@ class Memory:
         self.db = sqlite3.connect(path)
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA synchronous=FULL")
+        indexed = self.db.execute("SELECT 1 FROM sqlite_master WHERE name = 'utterances_fts'").fetchone()
         self.db.executescript(SCHEMA)
+        if not indexed:  # T4 より前に作った DB：それまでの発言も検索に入れる
+            self.db.execute("INSERT INTO utterances_fts(utterances_fts) VALUES('rebuild')")
         self.db.commit()
         self.session = None
 
@@ -74,6 +89,45 @@ class Memory:
                 "SELECT speaker, body FROM utterances WHERE kind = ? AND id > ? ORDER BY id DESC LIMIT ?",
                 (kind, after, limit)).fetchall()[::-1]
         return rows
+
+    def since(self, start: str, end: str | None = None) -> list[tuple[int, str, str]]:
+        """時刻が start 以降（end があれば end より前）の dialogue の発言。古い順の (番号, speaker, body)。"""
+        return self.db.execute(
+            "SELECT id, speaker, body FROM utterances WHERE kind = 'dialogue' AND at >= ? AND at < ? ORDER BY id",
+            (start, end or "9999")).fetchall()
+
+    def recall(self, query: str, before: str, limit: int) -> list[tuple[int, str, str, str]]:
+        """FTS5 で、時刻が before より前の dialogue の発言を bm25 の上位 limit 件引く。番号の古い順の (番号, at, speaker, body)。"""
+        rows = self.db.execute(
+            "SELECT u.id, u.at, u.speaker, u.body FROM utterances_fts JOIN utterances u ON u.id = utterances_fts.rowid"
+            " WHERE utterances_fts MATCH ? AND u.kind = 'dialogue' AND u.at < ? ORDER BY utterances_fts.rank LIMIT ?",
+            (query, before, limit)).fetchall()
+        return sorted(rows)
+
+    def missing_diary(self, shift: str, before: str) -> str | None:
+        """時刻が before より前の dialogue の発言があって、日記の無い日のうち最も古い日付。
+
+        shift は発言の時刻から1日の区切りを引く SQLite の修飾子（例 '-0 minutes'）。
+        """
+        row = self.db.execute(
+            "SELECT DISTINCT date(at, ?) AS d FROM utterances WHERE kind = 'dialogue' AND at < ?"
+            " AND d NOT IN (SELECT date FROM diaries) ORDER BY d LIMIT 1", (shift, before)).fetchone()
+        return row and row[0]
+
+    def add_diary(self, date: str, body: str) -> bool:
+        """日記を1日分足す。その日の日記がすでにあれば足さずに False を返す。"""
+        cur = self.db.execute("INSERT OR IGNORE INTO diaries(date, body, at) VALUES(?, ?, ?)", (date, body, _now()))
+        self.db.commit()
+        return cur.rowcount == 1
+
+    def has_diary(self, date: str) -> bool:
+        return self.db.execute("SELECT 1 FROM diaries WHERE date = ?", (date,)).fetchone() is not None
+
+    def diaries(self, before: str, limit: int) -> list[tuple[str, str]]:
+        """日付が before より前の日記の直近 limit 件。日付の古い順の (date, body)。"""
+        rows = self.db.execute("SELECT date, body FROM diaries WHERE date < ? ORDER BY date DESC LIMIT ?",
+                               (before, limit)).fetchall()
+        return rows[::-1]
 
     def last_id(self) -> int:
         return self.db.execute("SELECT COALESCE(MAX(id), 0) FROM utterances").fetchone()[0]
