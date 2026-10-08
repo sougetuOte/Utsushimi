@@ -101,6 +101,7 @@ class Core:
         self.trial_index = None
         self.trial_after = 0   # この番号より後の trial の発言が、いまのお試しの会話
         self.shutdown_calls = 0
+        self.done = threading.Event()  # 終了処理が終わった（Windows のセッション終了で画面のスレッドが待つ）
         self.loop_task = None  # メインループ（design.md §4.7）
         self.plan_task = None  # 行動予定「日付をまたいだら日記」の仕事
         self.plan_paused_until = 0.0
@@ -541,7 +542,10 @@ class Core:
             if task:
                 task.cancel()
         await asyncio.gather(*(t for t in (self.task, self.loop_task, self.plan_task) if t), return_exceptions=True)
-        await self._shutdown_diary()
+        if via == "session_end":
+            log.info("diary skipped reason=session_end")  # Windows が待つのは数秒なので書かない（design.md §4.8）
+        else:
+            await self._shutdown_diary()
         await self.llm.close()
         if self.persona:
             h = persona.hashes(PERSONA_DIR)
@@ -549,6 +553,7 @@ class Core:
         self.memory.end_session(via)
         self.memory.close()
         log.info("shutdown done")
+        self.done.set()
         self.signals.finished.emit()
         self.stopped.set()
 

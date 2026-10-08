@@ -30,6 +30,13 @@
 - 確かめ用の設定（T4）は、置き場の `config.toml` に書く。
   - 1日の区切り：`[memory]` の `day_start = "14:05"` など（既定 `"00:00"`）。日付またぎは、これを数分先にして確かめる（Windows の時計は触らない）
   - 文脈の上限：`[context]` の `limit = 6000` など（既定 30000。文字数）
+- 起動を `.cmd` で包むときは、改行を CRLF にし、日本語を書かない。改行が LF だと `cmd` が `set UTSUSHIMI_DATA=...` の行を読み飛ばし、
+  本アプリが `data/` で起動する（T5 で1回起きた）。包んだ `.cmd` は、本アプリを起動する前に `echo %UTSUSHIMI_DATA%` だけの写しで値が入ることを見る。
+- コンソールから起動するとき（T5）は、新しいコンソールの窓で `python.exe`（`pythonw.exe` ではない）を使う：
+
+  ```powershell
+  Start-Process pwsh -ArgumentList '-NoExit','-NoProfile','-Command',"`$env:UTSUSHIMI_DATA='$PWD\data\smoke\t5\<名前>'; .\.venv\Scripts\python.exe -m utsushimi"
+  ```
 
 ## 項目
 
@@ -185,6 +192,50 @@
 1. `git worktree add <スクラッチ>\t3 19723f9` で T3 の本体を出し、そこで `uv sync` する。T3 の本体は `UTSUSHIMI_DATA` を読まずに worktree の `data/` を使うので、そこに `config.toml`（`target = "fake"`・`seed = 7`）を置いて起動する。おまかせで確定して2往復話し、終了する（`taskkill /F` でもよい）。
 2. worktree の `data/utsushimi.db`（`-wal`・`-shm` も）と `persona/` を T4 の置き場へ写す。写した発言が前の日に属するように、置き場の `day_start` を今の時刻（時:分）にして、T4 の本体で起動する（`ERROR` が無い）。
 3. 写す前からあった発言の語句で「この前の〇〇」と送る → `recall ids=` にその番号がある。終わったら `git worktree remove` で worktree を外す。
+
+### S-25 起動したまま置いても消えない（T5）
+
+1. 置き場を2つ作り、1つは確かめを動かすシェルの中から、もう1つはシェルの外（WMI の `Win32_Process.Create` で `.cmd` を起動）から起動する。どちらも固めて1往復話す。
+2. どちらにも触れずに2時間以上置き、`pythonw.exe` の一覧で両方が残っているかを見る。消えていたら、ログの最後の行の時刻と `lifecycle` の行を見る。
+
+### S-26 トレイから1回だけ（T5。Bug-4・Bug-6）
+
+1. 起動して1往復話し、トレイから終了する → `shutdown begin via=tray call=1` と `shutdown done` が1行ずつで、`shutdown already in progress` が無い。
+2. `shutdown begin` の3秒後に窓の一覧が空で、`shutdown done` の後に `pythonw.exe` の一覧に本アプリが無い。
+
+### S-27 全経路で1回だけ（T5。L-3・BH-16）
+
+次の5つの経路ごとに起動して（会話の窓が出る経路では1往復話して）終え、`shutdown begin via=<経路> call=1` と `shutdown done` が1行ずつあることを見る。
+会話の窓が出る経路では、次の起動の `loaded=` に直前の会話が入っていて、欄に残っていることを見る。
+
+1. `tray`：トレイの「終了」（S-26）。
+2. `creation_close`：人格の無い置き場で起動し、キャラ作りの窓を閉じる（S-18 の1）。
+3. `persona_broken`：人格の壊れた置き場で起動し、小窓の「Close」を押す（S-7）。
+4. `console`：コンソールから起動して（前提）1往復話し、そのコンソールで Ctrl+C。
+5. `session_end`：起動して1往復話し、**主人が** Windows からサインアウトかシャットダウンをする。次のサインインの後、ログに `diary skipped reason=session_end` があり、
+   `diary created ... trigger=shutdown` が無く、`lifecycle` のその起動の行の `via` が `session_end` で `ended_at` が空でないことを見る。
+
+### S-28 続けざまの終了（T5。B-9）
+
+1. コンソールから起動して1往復話し、トレイから終了した直後に、そのコンソールで Ctrl+C。
+2. `shutdown begin via=tray call=1` の後に `shutdown begin via=console call=2` と `shutdown already in progress` があり、`shutdown done` が1行だけ。
+
+### S-29 同じ日に2回（T5。Bug-5）
+
+1. 同じ置き場で「起動 → 1往復 → トレイから終了」を同じ日に2回行う。
+2. 1回目に `diary created date=<その日> trigger=shutdown`、2回目に `diary exists date=<その日>` があり、どちらにも `ERROR` が無く、`diaries` のその日付が1行。
+
+### S-30 続きから始まる（T5。L-2）
+
+1. S-29 の置き場で、もう一度起動する（エラーが無い）。
+2. 最初の挨拶（`greet id=`）が、前の起動の会話の中身に触れているかを、DB の本文で見る。
+
+### S-31 2重起動を防ぐ（T5）
+
+1. ショートカットから起動し（前提の `UTSUSHIMI_DATA` を付けて）、窓を「×」で隠す。
+2. ショートカットをもう一度開く → 2つ目のログは `instance exists` だけで終わり（`start` が無い）、1つ目に `show via=second` が出て窓が表に出る。
+3. `pythonw.exe` の一覧で、1つ目の本体とその親（venv の起動器）のほかに本アプリが無い。
+4. 置き場の違うものを同時に起動すると、どちらも起動する（`instance exists` が出ない）。
 
 ## 画面の目視チェックリスト（L-5・B-11）
 
