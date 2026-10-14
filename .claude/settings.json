@@ -25,5 +25,16 @@
       "Bash(gh auth status)",
       "Bash(gh repo view:*)"
     ]
+  },
+  "extraKnownMarketplaces": {
+    "seneschal": {
+      "source": {
+        "source": "github",
+        "repo": "sougetuOte/seneschal"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "seneschal@seneschal": true
   }
 }
